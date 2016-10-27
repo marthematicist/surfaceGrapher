@@ -1,6 +1,6 @@
 // FUNCTION: zEquals
-zEquals = function( x , y ) {
-  
+var zEquals = function( x , y ) {
+  return x*x + y*y;
 }
 
 // CLASS DEFINITION: Region
@@ -54,12 +54,52 @@ class Cell {
     this.p2 = createVector( x+w , y+h , 0 );
     this.p3 = createVector( x , y+h , 0 );
     this.p4 = createVector( x+0.5*w , y+0.5*h , 0 );
+    this.zMin = 0;
+    this.zMax = 0;
   }
 }
 
 // CLASS METHODS: Cell
 Cell.prototype.calculateZ = function() {
-  this.p0.z = 
+  this.p0.z = zEquals( this.p0.x , this.p0.y );
+  if( this.p0.z < this.zMin ) {
+    this.zMin = this.p0.z;
+  }
+  if( this.p0.z > this.zMax ) {
+    this.zMax = this.p0.z;
+  }
+
+  this.p1.z = zEquals( this.p1.x , this.p1.y );
+  if( this.p1.z < this.zMin ) {
+    this.zMin = this.p1.z;
+  }
+  if( this.p1.z > this.zMax ) {
+    this.zMax = this.p1.z;
+  }
+  
+  this.p2.z = zEquals( this.p2.x , this.p2.y );
+  if( this.p2.z < this.zMin ) {
+    this.zMin = this.p2.z;
+  }
+  if( this.p2.z > this.zMax ) {
+    this.zMax = this.p2.z;
+  }
+  
+  this.p3.z = zEquals( this.p3.x , this.p3.y );
+  if( this.p3.z < this.zMin ) {
+    this.zMin = this.p3.z;
+  }
+  if( this.p3.z > this.zMax ) {
+    this.zMax = this.p3.z;
+  }
+  
+  this.p4.z = zEquals( this.p4.x , this.p4.y );
+  if( this.p4.z < this.zMin ) {
+    this.zMin = this.p4.z;
+  }
+  if( this.p4.z > this.zMax ) {
+    this.zMax = this.p4.z;
+  }
 }
 
 function setup() {
