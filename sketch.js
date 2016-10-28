@@ -88,6 +88,10 @@ class Cell {
     if( this.p3.z > this.zMax ) { this.zMax = this.p3.z; }
     if( this.p4.z < this.zMin ) { this.zMin = this.p4.z; }
     if( this.p4.z > this.zMax ) { this.zMax = this.p4.z; }
+    
+    // display min and max values in console
+    console.log( 'zMin = ' + this.zMin );
+    console.log( 'zMax = ' + this.zMax );
   }
 }
 
