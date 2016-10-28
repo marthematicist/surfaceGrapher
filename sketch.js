@@ -1,7 +1,7 @@
 // FUNCTION: zEquals
 function zEquals( x , y ) {
-  //x = x - 1.5;
-  //y = y - 1.5;
+  x = x - 1.5;
+  y = y - 1.5;
   var a = -0.2*(1-0.7/6*sqrt((x*x + y*y) ))*cos( 9 *sqrt( (x*x + y*y) ) ) ;
   return a;
 }
