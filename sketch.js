@@ -2,7 +2,7 @@
 function zEquals( x , y ) {
   x = x - 1.5;
   y = y - 1.5;
-  var a = -0.3*(1-0.7/6*sqrt((x*x + y*y) ))*cos( 9 *sqrt( (x*x + y*y) ) ) ;
+  var a = -0.5*pow(0.6 , sqrt(x*x + y*y))*cos( 9 *sqrt( (x*x + y*y) ) ) ;
   return a;
 }
 
@@ -26,11 +26,14 @@ setupGlobalVariables = function() {
   maxDim = max( xDim , yDim );
   
   // number of cell rows and columns
-  M = 50;
-  N = 50;
+  M = 100;
+  N = 100;
   
   // screen factor ( regionPosition*sFactor = screenPosition )
   sFactor = minRes / maxDim * 0.8;
+  
+  // thickness of base (for 3D printing)
+  baseThickness = 0.5;
   
   // initialize Region
   R = new Region( xMin , yMin , xMax , yMax , M , N );
@@ -42,9 +45,8 @@ function setup() {
   
   // set canvas dimensions and 3D mode
   createCanvas( xRes , yRes , WEBGL );
-  console.log( 'all set u');
   
-
+  
 }
 
 function draw() {
@@ -53,6 +55,8 @@ function draw() {
   rotateZ( mouseX*0.001);
   
   drawMesh( R );
+  //drawTriangleMesh( R );
+  //drawEdges( R );
 
 }
 
@@ -150,6 +154,21 @@ class Region {
     console.log( 'zMin = ' + this.zMin );
     console.log( 'zMax = ' + this.zMax );
     
+    // find vertical offset amount
+    var vertOffset = createVector( 0 , 0 , baseThickness - this.zMin );
+    
+    // apply vertical offset to all cells
+    for( var m = 0 ; m < this.M ; m++ ) {
+      for( var n = 0 ; n < this.N ; n++ ) {
+        this.cells[m][n].p0.add( vertOffset );
+        this.cells[m][n].p1.add( vertOffset );
+        this.cells[m][n].p2.add( vertOffset );
+        this.cells[m][n].p3.add( vertOffset );
+        this.cells[m][n].p4.add( vertOffset );
+      }
+    }
+    
+    
   }
   
 }
@@ -158,50 +177,697 @@ class Region {
 // FUNCTION: draw Region mesh to screen
 function drawMesh( R ) {
   // draw left and top sides for all Cells
-  for( var m = 0 ; m < M ; m++ ) {
-    for( var n = 0 ; n < N ; n++ ) {
+  for( var m = 0 ; m < R.M ; m++ ) {
+    for( var n = 0 ; n < R.N ; n++ ) {
+      var v1 = p5.Vector.mult( R.cells[m][n].p1 , sFactor );
+      var v2 = p5.Vector.mult( R.cells[m][n].p0 , sFactor );
+      var v3 = p5.Vector.mult( R.cells[m][n].p3 , sFactor );
       beginShape();
-      vertex( 
-        R.cells[m][n].p1.x * sFactor , 
-        R.cells[m][n].p1.y * sFactor , 
-        R.cells[m][n].p1.z * sFactor );
-      vertex( 
-        R.cells[m][n].p0.x * sFactor , 
-        R.cells[m][n].p0.y * sFactor , 
-        R.cells[m][n].p0.z * sFactor );
-      vertex( 
-        R.cells[m][n].p3.x * sFactor , 
-        R.cells[m][n].p3.y * sFactor , 
-        R.cells[m][n].p3.z * sFactor );
+      vertex( v1.x , v1.y , v1.z );
+      vertex( v2.x , v2.y , v2.z );
+      vertex( v3.x , v3.y , v3.z );
       endShape();
     }
   }
   // draw bottom side for cells (0,N-1) to (M-1,N-1)
-  for( var m = 0 ; m < M ; m++ ) {
-    n = N-1;
+  for( var m = 0 ; m < R.M ; m++ ) {
+    n = R.N-1;
+    var v1 = p5.Vector.mult( R.cells[m][n].p2 , sFactor );
+    var v2 = p5.Vector.mult( R.cells[m][n].p3 , sFactor );
     beginShape();
-    vertex( 
-        R.cells[m][n].p2.x * sFactor , 
-        R.cells[m][n].p2.y * sFactor , 
-        R.cells[m][n].p2.z * sFactor );
-      vertex( 
-        R.cells[m][n].p3.x * sFactor , 
-        R.cells[m][n].p3.y * sFactor , 
-        R.cells[m][n].p3.z * sFactor );
+    vertex( v1.x , v1.y , v1.z );
+    vertex( v2.x , v2.y , v2.z );
     endShape();
   }
   // draw right side for cells (M-1,0) to (M-1,N-1)
-  for( var n = 0 ; n < N ; n++ ) {
-    m = M-1;
+  for( var n = 0 ; n < R.N ; n++ ) {
+    m = R.M-1;
+    var v1 = p5.Vector.mult( R.cells[m][n].p2 , sFactor );
+    var v2 = p5.Vector.mult( R.cells[m][n].p1 , sFactor );
     beginShape();
-    vertex( 
-        R.cells[m][n].p2.x * sFactor , 
-        R.cells[m][n].p2.y * sFactor , 
-        R.cells[m][n].p2.z * sFactor );
-      vertex( 
-        R.cells[m][n].p1.x * sFactor , 
-        R.cells[m][n].p1.y * sFactor , 
-        R.cells[m][n].p1.z * sFactor );
+    vertex( v1.x , v1.y , v1.z );
+    vertex( v2.x , v2.y , v2.z );
     endShape();
   }
 }
+
+// FUNCTION: draw Region triangle mesh to screen
+function drawTriangleMesh( R ) {
+  // draw 4 triangles for each cell
+  for( var m = 0 ; m < R.M ; m++ ) {
+    for( var n = 0 ; n < R.N ; n++ ) {
+      var v0 = p5.Vector.mult( R.cells[m][n].p0 , sFactor );
+      var v1 = p5.Vector.mult( R.cells[m][n].p1 , sFactor );
+      var v2 = p5.Vector.mult( R.cells[m][n].p2 , sFactor );
+      var v3 = p5.Vector.mult( R.cells[m][n].p3 , sFactor );
+      var v4 = p5.Vector.mult( R.cells[m][n].p4 , sFactor );
+      
+      // top triangle
+      beginShape();
+      vertex( v4.x , v4.y , v4.z );
+      vertex( v1.x , v1.y , v1.z );
+      vertex( v0.x , v0.y , v0.z );
+      endShape( CLOSE );
+      
+      // right triangle
+      beginShape();
+      vertex( v4.x , v4.y , v4.z );
+      vertex( v2.x , v2.y , v2.z );
+      vertex( v1.x , v1.y , v1.z );
+      endShape( CLOSE );
+      
+      // bottom triangle
+      beginShape();
+      vertex( v4.x , v4.y , v4.z );
+      vertex( v3.x , v3.y , v3.z );
+      vertex( v2.x , v2.y , v2.z );
+      endShape( CLOSE );
+      
+      // right triangle
+      beginShape();
+      vertex( v4.x , v4.y , v4.z );
+      vertex( v0.x , v0.y , v0.z );
+      vertex( v3.x , v3.y , v3.z );
+      endShape( CLOSE );
+      
+    }
+  }
+}
+
+
+// FUNCTION: draw region edges to screen
+function drawEdges( R ) {
+  
+  // left edge:
+  for( var n = 0 ; n < R.N ; n++ ) {
+    var m = 0;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p0 , sFactor );
+    var v1 = p5.Vector.mult( R.cells[m][n].p3 , sFactor );
+    var v2 = p5.Vector.mult( R.cells[m][n].p3 , sFactor );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p0 , sFactor );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v1.x , v1.y , v1.z );
+    vertex( v0.x , v0.y , v0.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v2.x , v2.y , v2.z );
+    vertex( v1.x , v1.y , v1.z );
+    endShape( CLOSE );
+    // bottom triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v3.x , v3.y , v3.z );
+    vertex( v2.x , v2.y , v2.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v0.x , v0.y , v0.z );
+    vertex( v3.x , v3.y , v3.z );
+    endShape( CLOSE );
+  }
+  
+  // right edge:
+  for( var n = 0 ; n < R.N ; n++ ) {
+    var m = R.M - 1 ;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p2 , sFactor );
+    var v1 = p5.Vector.mult( R.cells[m][n].p1 , sFactor );
+    var v2 = p5.Vector.mult( R.cells[m][n].p1 , sFactor );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p2 , sFactor );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v1.x , v1.y , v1.z );
+    vertex( v0.x , v0.y , v0.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v2.x , v2.y , v2.z );
+    vertex( v1.x , v1.y , v1.z );
+    endShape( CLOSE );
+    // bottom triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v3.x , v3.y , v3.z );
+    vertex( v2.x , v2.y , v2.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v0.x , v0.y , v0.z );
+    vertex( v3.x , v3.y , v3.z );
+    endShape( CLOSE );
+  }
+  
+  // top edge:
+  for( var m = 0 ; m < R.M ; m++ ) {
+    var n = 0 ;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p1 , sFactor );
+    var v1 = p5.Vector.mult( R.cells[m][n].p0 , sFactor );
+    var v2 = p5.Vector.mult( R.cells[m][n].p0 , sFactor );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p1 , sFactor );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v1.x , v1.y , v1.z );
+    vertex( v0.x , v0.y , v0.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v2.x , v2.y , v2.z );
+    vertex( v1.x , v1.y , v1.z );
+    endShape( CLOSE );
+    // bottom triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v3.x , v3.y , v3.z );
+    vertex( v2.x , v2.y , v2.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v0.x , v0.y , v0.z );
+    vertex( v3.x , v3.y , v3.z );
+    endShape( CLOSE );
+  }
+  
+  // bottom edge:
+  for( var m = 0 ; m < R.M ; m++ ) {
+    var n = N -1 ;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p3 , sFactor );
+    var v1 = p5.Vector.mult( R.cells[m][n].p2 , sFactor );
+    var v2 = p5.Vector.mult( R.cells[m][n].p2 , sFactor );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p3 , sFactor );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v1.x , v1.y , v1.z );
+    vertex( v0.x , v0.y , v0.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v2.x , v2.y , v2.z );
+    vertex( v1.x , v1.y , v1.z );
+    endShape( CLOSE );
+    // bottom triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v3.x , v3.y , v3.z );
+    vertex( v2.x , v2.y , v2.z );
+    endShape( CLOSE );
+    // right triangle
+    beginShape();
+    vertex( v4.x , v4.y , v4.z );
+    vertex( v0.x , v0.y , v0.z );
+    vertex( v3.x , v3.y , v3.z );
+    endShape( CLOSE );
+    
+    
+  }
+  
+  // base bottom
+  var v3 = createVector( R.xMin , R.yMin , 0 );
+  var v2 = createVector( R.xMax , R.yMin , 0 );
+  var v1 = createVector( R.xMax , R.yMax , 0 );
+  var v0 = createVector( R.xMin , R.yMax , 0 );
+  v0.mult( sFactor );
+  v1.mult( sFactor );
+  v2.mult( sFactor );
+  v3.mult( sFactor );
+  var v4 = createVector(
+    0.25*( v0.x + v1.x + v2.x + v3.x) ,
+    0.25*( v0.y + v1.y + v2.y + v3.y) ,
+    0.25*( v0.z + v1.z + v2.z + v3.z)
+    );
+  // top triangle
+  beginShape();
+  vertex( v4.x , v4.y , v4.z );
+  vertex( v1.x , v1.y , v1.z );
+  vertex( v0.x , v0.y , v0.z );
+  endShape( CLOSE );
+  // right triangle
+  beginShape();
+  vertex( v4.x , v4.y , v4.z );
+  vertex( v2.x , v2.y , v2.z );
+  vertex( v1.x , v1.y , v1.z );
+  endShape( CLOSE );
+  // bottom triangle
+  beginShape();
+  vertex( v4.x , v4.y , v4.z );
+  vertex( v3.x , v3.y , v3.z );
+  vertex( v2.x , v2.y , v2.z );
+  endShape( CLOSE );
+  // right triangle
+  beginShape();
+  vertex( v4.x , v4.y , v4.z );
+  vertex( v0.x , v0.y , v0.z );
+  vertex( v3.x , v3.y , v3.z );
+  endShape( CLOSE );
+}
+
+// FUNCTION: output an ASCII .stl file for 3D printing
+function outputSTL( R ) {
+  // output file header
+  var fileText = new Array( "solid surfaceGrapher\n" );
+  
+  // include surface triangles
+  for( var m = 0 ; m < R.M ; m++ ) {
+    for( var n = 0 ; n < R.N ; n++ ) {
+      var v0 = R.cells[m][n].p0 ;
+      var v1 = R.cells[m][n].p1 ;
+      var v2 = R.cells[m][n].p2 ;
+      var v3 = R.cells[m][n].p3 ;
+      var v4 = R.cells[m][n].p4 ;
+      
+      // top triangle
+      var e1 = p5.Vector.sub( v4 , v1 );
+      var e2 = p5.Vector.sub( v4 , v0 );
+      var n0 = p5.Vector.cross( e2 , e1 );
+      n0.normalize();
+      append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+      append( fileText , "\touter loop\n" );
+      append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+      append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+      append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+      append( fileText , "\tendloop\n" );
+      append( fileText , "endfacet\n" );
+      
+      // right triangle
+      var e1 = p5.Vector.sub( v4 , v2 );
+      var e2 = p5.Vector.sub( v4 , v1 );
+      var n0 = p5.Vector.cross( e2 , e1 );
+      n0.normalize();
+      append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+      append( fileText , "\touter loop\n" );
+      append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+      append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+      append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+      append( fileText , "\tendloop\n" );
+      append( fileText , "endfacet\n" );
+      
+      // bottom triangle
+      var e1 = p5.Vector.sub( v4 , v3 );
+      var e2 = p5.Vector.sub( v4 , v2 );
+      var n0 = p5.Vector.cross( e2 , e1 );
+      n0.normalize();
+      append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+      append( fileText , "\touter loop\n" );
+      append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+      append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+      append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+      append( fileText , "\tendloop\n" );
+      append( fileText , "endfacet\n" );
+      
+      // top triangle
+      var e1 = p5.Vector.sub( v4 , v0 );
+      var e2 = p5.Vector.sub( v4 , v3 );
+      var n0 = p5.Vector.cross( e2 , e1 );
+      n0.normalize();
+      append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+      append( fileText , "\touter loop\n" );
+      append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+      append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+      append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+      append( fileText , "\tendloop\n" );
+      append( fileText , "endfacet\n" );
+      
+
+    
+      
+      
+      
+    }
+    
+  }
+  
+  // left edge:
+  for( var n = 0 ; n < R.N ; n++ ) {
+    var m = 0;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p0 , 1 );
+    var v1 = p5.Vector.mult( R.cells[m][n].p3 , 1 );
+    var v2 = p5.Vector.mult( R.cells[m][n].p3 , 1 );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p0 , 1 );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v1 );
+    var e2 = p5.Vector.sub( v4 , v0 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // right triangle
+    var e1 = p5.Vector.sub( v4 , v2 );
+    var e2 = p5.Vector.sub( v4 , v1 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // bottom triangle
+    var e1 = p5.Vector.sub( v4 , v3 );
+    var e2 = p5.Vector.sub( v4 , v2 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v0 );
+    var e2 = p5.Vector.sub( v4 , v3 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+  }
+  
+  // right edge
+  for( var n = 0 ; n < R.N ; n++ ) {
+    var m = R.M - 1 ;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p2 , 1 );
+    var v1 = p5.Vector.mult( R.cells[m][n].p1 , 1 );
+    var v2 = p5.Vector.mult( R.cells[m][n].p1 , 1 );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p2 , 1 );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v1 );
+    var e2 = p5.Vector.sub( v4 , v0 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // right triangle
+    var e1 = p5.Vector.sub( v4 , v2 );
+    var e2 = p5.Vector.sub( v4 , v1 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // bottom triangle
+    var e1 = p5.Vector.sub( v4 , v3 );
+    var e2 = p5.Vector.sub( v4 , v2 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v0 );
+    var e2 = p5.Vector.sub( v4 , v3 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+  }
+  
+  // top edge
+  for( var m = 0 ; m < R.M ; m++ ) {
+    var n = 0 ;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p1 , 1 );
+    var v1 = p5.Vector.mult( R.cells[m][n].p0 , 1 );
+    var v2 = p5.Vector.mult( R.cells[m][n].p0 , 1 );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p1 , 1 );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v1 );
+    var e2 = p5.Vector.sub( v4 , v0 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // right triangle
+    var e1 = p5.Vector.sub( v4 , v2 );
+    var e2 = p5.Vector.sub( v4 , v1 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // bottom triangle
+    var e1 = p5.Vector.sub( v4 , v3 );
+    var e2 = p5.Vector.sub( v4 , v2 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v0 );
+    var e2 = p5.Vector.sub( v4 , v3 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+  }
+  
+  // bottom edge
+  for( var m = 0 ; m < R.M ; m++ ) {
+    var n = R.N - 1 ;
+    // find vertices
+    var v0 = p5.Vector.mult( R.cells[m][n].p3 , 1 );
+    var v1 = p5.Vector.mult( R.cells[m][n].p2 , 1 );
+    var v2 = p5.Vector.mult( R.cells[m][n].p2 , 1 );
+    v2.z = 0;
+    var v3 = p5.Vector.mult( R.cells[m][n].p3 , 1 );
+    v3.z = 0;
+    var v4 = createVector(
+      0.25*( v0.x + v1.x + v2.x + v3.x) ,
+      0.25*( v0.y + v1.y + v2.y + v3.y) ,
+      0.25*( v0.z + v1.z + v2.z + v3.z)
+      );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v1 );
+    var e2 = p5.Vector.sub( v4 , v0 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // right triangle
+    var e1 = p5.Vector.sub( v4 , v2 );
+    var e2 = p5.Vector.sub( v4 , v1 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // bottom triangle
+    var e1 = p5.Vector.sub( v4 , v3 );
+    var e2 = p5.Vector.sub( v4 , v2 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+    // top triangle
+    var e1 = p5.Vector.sub( v4 , v0 );
+    var e2 = p5.Vector.sub( v4 , v3 );
+    var n0 = p5.Vector.cross( e2 , e1 );
+    n0.normalize();
+    append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+    append( fileText , "\touter loop\n" );
+    append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+    append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+    append( fileText , "\tendloop\n" );
+    append( fileText , "endfacet\n" );
+  }
+  
+  // base bottom
+  var v3 = createVector( R.xMin , R.yMin , 0 );
+  var v2 = createVector( R.xMax , R.yMin , 0 );
+  var v1 = createVector( R.xMax , R.yMax , 0 );
+  var v0 = createVector( R.xMin , R.yMax , 0 );
+  var v4 = createVector(
+    0.25*( v0.x + v1.x + v2.x + v3.x) ,
+    0.25*( v0.y + v1.y + v2.y + v3.y) ,
+    0.25*( v0.z + v1.z + v2.z + v3.z)
+    );
+  // top triangle
+  var e1 = p5.Vector.sub( v4 , v1 );
+  var e2 = p5.Vector.sub( v4 , v0 );
+  var n0 = p5.Vector.cross( e2 , e1 );
+  n0.normalize();
+  append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+  append( fileText , "\touter loop\n" );
+  append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+  append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+  append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+  append( fileText , "\tendloop\n" );
+  append( fileText , "endfacet\n" );
+  // right triangle
+  var e1 = p5.Vector.sub( v4 , v2 );
+  var e2 = p5.Vector.sub( v4 , v1 );
+  var n0 = p5.Vector.cross( e2 , e1 );
+  n0.normalize();
+  append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+  append( fileText , "\touter loop\n" );
+  append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+  append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+  append( fileText , "\t\tvertex " + v1.x + " " + v1.y + " " + v1.z + "\n" );
+  append( fileText , "\tendloop\n" );
+  append( fileText , "endfacet\n" );
+  // bottom triangle
+  var e1 = p5.Vector.sub( v4 , v3 );
+  var e2 = p5.Vector.sub( v4 , v2 );
+  var n0 = p5.Vector.cross( e2 , e1 );
+  n0.normalize();
+  append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+  append( fileText , "\touter loop\n" );
+  append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+  append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+  append( fileText , "\t\tvertex " + v2.x + " " + v2.y + " " + v2.z + "\n" );
+  append( fileText , "\tendloop\n" );
+  append( fileText , "endfacet\n" );
+  // top triangle
+  var e1 = p5.Vector.sub( v4 , v0 );
+  var e2 = p5.Vector.sub( v4 , v3 );
+  var n0 = p5.Vector.cross( e2 , e1 );
+  n0.normalize();
+  append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z + "\n" );
+  append( fileText , "\touter loop\n" );
+  append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z + "\n" );
+  append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z + "\n" );
+  append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z + "\n" );
+  append( fileText , "\tendloop\n" );
+  append( fileText , "endfacet\n" );
+  
+  
+  // wrap up file text
+  append( fileText , "endsolid surfaceGrapher\n" );
+  save( fileText , 'test' , 'stl' );
+}
+
+
+function keyTyped() {
+  if (key === 's') {
+    outputSTL( R );
+  }
+}
+
