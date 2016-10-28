@@ -185,21 +185,19 @@ function drawMesh( R ) {
         R.cells[m][n].p3.y * sFactor , 
         R.cells[m][n].p3.z * sFactor );
     endShape();
-    //line( x1 , y1 , z1 , x2 , y2 , z2 );
   }
   // draw right side for cells (M-1,0) to (M-1,N-1)
   for( var n = 0 ; n < N ; n++ ) {
     m = M-1;
-    var x1 = R.cells[m][n].p2.x * sFactor;
-    var y1 = R.cells[m][n].p2.y * sFactor;
-    var z1 = R.cells[m][n].p2.z * sFactor;
-    var x2 = R.cells[m][n].p1.x * sFactor;
-    var y2 = R.cells[m][n].p1.y * sFactor;
-    var z2 = R.cells[m][n].p1.z * sFactor;
     beginShape();
-    vertex( x1 , y1 , z1 );
-    vertex( x2 , y2 , z2 );
+    vertex( 
+        R.cells[m][n].p2.x * sFactor , 
+        R.cells[m][n].p2.y * sFactor , 
+        R.cells[m][n].p2.z * sFactor );
+      vertex( 
+        R.cells[m][n].p1.x * sFactor , 
+        R.cells[m][n].p1.y * sFactor , 
+        R.cells[m][n].p1.z * sFactor );
     endShape();
-    //line( x1 , y1 , z1 , x2 , y2 , z2 );
   }
 }
