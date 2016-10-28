@@ -32,8 +32,8 @@ setupGlobalVariables = function() {
   maxDim = max( xDim , yDim );
   
   // number of cell rows and columns
-  M = 100;
-  N = 100;
+  M = 50;
+  N = 50;
   
   // screen factor ( regionPosition*sFactor = screenPosition )
   sFactor = minRes / maxDim * 0.8;
