@@ -175,15 +175,15 @@ function drawMesh( R ) {
   // draw bottom side for cells (0,N-1) to (M-1,N-1)
   for( var m = 0 ; m < M ; m++ ) {
     n = N-1;
-    var x1 = R.cells[m][n].p2.x * sFactor;
-    var y1 = R.cells[m][n].p2.y * sFactor;
-    var z1 = R.cells[m][n].p2.z * sFactor;
-    var x2 = R.cells[m][n].p3.x * sFactor;
-    var y2 = R.cells[m][n].p3.y * sFactor;
-    var z2 = R.cells[m][n].p3.z * sFactor;
     beginShape();
-    vertex( x1 , y1 , z1 );
-    vertex( x2 , y2 , z2 );
+    vertex( 
+        R.cells[m][n].p2.x * sFactor , 
+        R.cells[m][n].p2.y * sFactor , 
+        R.cells[m][n].p2.z * sFactor );
+      vertex( 
+        R.cells[m][n].p3.x * sFactor , 
+        R.cells[m][n].p3.y * sFactor , 
+        R.cells[m][n].p3.z * sFactor );
     endShape();
     //line( x1 , y1 , z1 , x2 , y2 , z2 );
   }
