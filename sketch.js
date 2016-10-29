@@ -598,7 +598,7 @@ function outputSTL( R ) {
     append( fileText , "facet normal " + n0.x + " " + n0.y + " " + n0.z );
     append( fileText , "\touter loop" );
     append( fileText , "\t\tvertex " + v4.x + " " + v4.y + " " + v4.z );
-    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0. );
+    append( fileText , "\t\tvertex " + v0.x + " " + v0.y + " " + v0.z );
     append( fileText , "\t\tvertex " + v3.x + " " + v3.y + " " + v3.z );
     append( fileText , "\tendloop" );
     append( fileText , "endfacet" );
