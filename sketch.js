@@ -2,7 +2,7 @@
 function zEquals( x , y ) {
   x = x - 1.5;
   y = y - 1.5;
-  var a = -0.5*pow(0.6 , sqrt(x*x + y*y))*cos( 9 *sqrt( (x*x + y*y) ) ) ;
+  var a = 0.5*pow(0.6 , sqrt(x*x + y*y))*cos( 9 *sqrt( (x*x + y*y) ) ) ;
   return a;
 }
 
@@ -33,7 +33,7 @@ setupGlobalVariables = function() {
   sFactor = minRes / maxDim * 0.8;
   
   // thickness of base (for 3D printing)
-  baseThickness = 0.5;
+  baseThickness = 0.1;
   
   // initialize Region
   R = new Region( xMin , yMin , xMax , yMax , M , N );
